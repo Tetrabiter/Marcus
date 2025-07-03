@@ -42,7 +42,7 @@ npm install
 #### 📁 Для backend:
 
 ```bash
-cd ../backend
+cd backend
 npm install
 ```
 
