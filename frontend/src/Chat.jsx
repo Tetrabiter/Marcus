@@ -1,47 +1,80 @@
 import { useState, useRef, useEffect } from 'react';
-import { IoSend , IoSettingsSharp , IoMoon , IoSunny} from 'react-icons/io5';
+import { IoSend, IoSettingsSharp, IoSunny } from 'react-icons/io5';
 import { BsRobot, BsPersonCircle } from 'react-icons/bs';
 
 function Chat() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
+  const [isBotTyping, setIsBotTyping] = useState(false);
   const messagesEndRef = useRef(null);
 
   const handleSend = async () => {
-  if (!input.trim()) return;
+    if (!input.trim()) return;
 
-  const userMessage = {
-    text: input.trim(),
-    sender: 'user',
+    const userMessage = {
+      text: input.trim(),
+      sender: 'user',
+    };
+
+    setMessages((prev) => [...prev, userMessage]);
+    setInput('');
+    setIsBotTyping(true);
+
+    try {
+      const res = await fetch('http://localhost:3001/api/interview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: input.trim(),
+        }),
+      });
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let botText = '';
+      let botStarted = false;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n').filter((line) => line.startsWith('data:'));
+
+        for (const line of lines) {
+          const token = line.replace('data: ', '');
+          botText += token;
+
+          setMessages((prev) => {
+            const newMessages = [...prev];
+
+            if (botStarted) {
+              const last = newMessages[newMessages.length - 1];
+              if (last?.sender === 'bot') {
+                newMessages[newMessages.length - 1] = {
+                  ...last,
+                  text: botText,
+                };
+              }
+            } else {
+              newMessages.push({ text: token, sender: 'bot' });
+              botStarted = true;
+            }
+
+            return newMessages;
+          });
+        }
+      }
+
+      setIsBotTyping(false);
+    } catch (error) {
+      setMessages((prev) => [
+        ...prev,
+        { text: 'Ошибка при получении ответа от ИИ 😢', sender: 'bot' },
+      ]);
+      setIsBotTyping(false);
+    }
   };
-
-  setMessages((prev) => [...prev, userMessage]);
-  setInput('');
-
-  try {
-    const res = await fetch('http://localhost:3001/api/interview', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        prompt: input.trim(),
-      }),
-    });
-
-    const data = await res.json();
-    const botMessage = {
-      text: data.response,
-      sender: 'bot',
-    };
-
-    setMessages((prev) => [...prev, botMessage]);
-  } catch (error) {
-    const errorMessage = {
-      text: 'Ошибка при получении ответа от ИИ 😢',
-      sender: 'bot',
-    };
-    setMessages((prev) => [...prev, errorMessage]);
-  }
-};
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -50,7 +83,6 @@ function Chat() {
     }
   };
 
-  // Автоскролл вниз
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -60,9 +92,9 @@ function Chat() {
       {/* Заголовок */}
       <div className="flex justify-between p-4 border-b border-gray-700 text-xl font-semibold">
         <h3>Chat with Marcus</h3>
-        <div className='flex gap-3'>
-          <button><IoSettingsSharp className='text-2xl'/></button>
-          <button><IoSunny className='text-2xl'/></button>
+        <div className="flex gap-3">
+          <button><IoSettingsSharp className="text-2xl" /></button>
+          <button><IoSunny className="text-2xl" /></button>
         </div>
       </div>
 
@@ -71,16 +103,12 @@ function Chat() {
         {messages.map((msg, idx) => (
           <div
             key={idx}
-            className={`flex items-start gap-2 ${
-              msg.sender === 'user' ? 'justify-end' : 'justify-start'
-            }`}
+            className={`flex items-start gap-2 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             {msg.sender === 'bot' && <BsRobot className="text-2xl mt-1" />}
             <div
-              className={`px-4 py-2 rounded-xl max-w-xs ${
-                msg.sender === 'user'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-800 text-white'
+              className={`px-4 py-2 rounded-xl break-words max-w-[70%] ${
+                msg.sender === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-white'
               }`}
             >
               {msg.text}
@@ -90,6 +118,14 @@ function Chat() {
             )}
           </div>
         ))}
+
+        {isBotTyping && (
+          <div className="italic text-gray-400 flex items-center gap-2">
+            <BsRobot className="animate-pulse text-xl" />
+            <span>Маркус печатает...</span>
+          </div>
+        )}
+
         <div ref={messagesEndRef} />
       </div>
 
