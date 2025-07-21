@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { IoSend, IoSettingsSharp, IoSunny } from 'react-icons/io5';
 import { BsRobot, BsPersonCircle } from 'react-icons/bs';
+import ReactMarkdown from 'react-markdown';
 
 function Chat() {
   const [messages, setMessages] = useState([]);
@@ -17,62 +18,63 @@ function Chat() {
     };
 
     setMessages((prev) => [...prev, userMessage]);
+    const currentInput = input.trim();
     setInput('');
     setIsBotTyping(true);
 
     try {
-      const res = await fetch('http://localhost:3001/api/interview', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt: input.trim(),
-        }),
-      });
+      const eventSource = new EventSource(
+        `http://localhost:3001/api/interview?prompt=${encodeURIComponent(currentInput)}`
+      );
 
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let botText = '';
-      let botStarted = false;
+      let botMessage = { text: '', sender: 'bot' };
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n').filter((line) => line.startsWith('data:'));
-
-        for (const line of lines) {
-          const token = line.replace('data: ', '');
-          botText += token;
-
-          setMessages((prev) => {
-            const newMessages = [...prev];
-
-            if (botStarted) {
-              const last = newMessages[newMessages.length - 1];
-              if (last?.sender === 'bot') {
-                newMessages[newMessages.length - 1] = {
-                  ...last,
-                  text: botText,
-                };
-              }
-            } else {
-              newMessages.push({ text: token, sender: 'bot' });
-              botStarted = true;
-            }
-
-            return newMessages;
-          });
+      eventSource.onmessage = (event) => {
+        console.log('📨 Получены данные:', event.data);
+        
+        if (event.data === '[DONE]') {
+          eventSource.close();
+          setIsBotTyping(false);
+          return;
         }
-      }
 
-      setIsBotTyping(false);
+        // Добавляем текст к последнему сообщению бота
+        botMessage.text += event.data;
+        setMessages((prev) => {
+          // Если последнее сообщение - от бота, обновляем его
+          const lastMsg = prev[prev.length - 1];
+          if (lastMsg?.sender === 'bot') {
+            return [...prev.slice(0, -1), { ...lastMsg, text: botMessage.text }];
+          }
+          // Иначе добавляем новое сообщение
+          return [...prev, botMessage];
+        });
+      };
+
+      eventSource.onerror = (error) => {
+        console.error('❌ EventSource error:', error);
+        eventSource.close();
+        setIsBotTyping(false);
+        setMessages((prev) => [
+          ...prev,
+          { 
+            text: '❌ Ошибка соединения. Убедитесь что:\n• Запущен бэкенд (http://localhost:3001)\n• Запущен Ollama (http://localhost:11434)\n• Загружена модель codellama:13b', 
+            sender: 'bot' 
+          },
+        ]);
+      };
+
+      eventSource.onopen = () => {
+        console.log('✅ Соединение установлено');
+      };
+
     } catch (error) {
+      console.error('❌ Connection error:', error);
+      setIsBotTyping(false);
       setMessages((prev) => [
         ...prev,
-        { text: 'Ошибка при получении ответа от ИИ 😢', sender: 'bot' },
+        { text: '❌ Ошибка при создании соединения', sender: 'bot' },
       ]);
-      setIsBotTyping(false);
     }
   };
 
@@ -86,6 +88,130 @@ function Chat() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Компонент для отображения сообщений с поддержкой markdown
+  const MessageContent = ({ message, isStreaming = false }) => {
+    if (message.sender === 'user') {
+      return <span>{message.text}</span>;
+    }
+
+    // Для потоковых сообщений используем более безопасный подход
+    if (isStreaming) {
+      // Простая обработка для потокового контента
+      const text = message.text;
+      
+      // Обрабатываем инлайн код во время стриминга
+      const renderStreamingText = (text) => {
+        // Разбиваем текст по инлайн коду (`код`)
+        const parts = text.split(/(`[^`]*`?)/g);
+        
+        return parts.map((part, index) => {
+          if (part.startsWith('`') && part.endsWith('`') && part.length > 2) {
+            return (
+              <code
+                key={index}
+                className="bg-gray-700 text-orange-300 px-1 py-0.5 rounded text-sm font-mono"
+              >
+                {part.slice(1, -1)}
+              </code>
+            );
+          } else if (part.startsWith('`')) {
+            // Незавершенный инлайн код
+            return (
+              <span key={index} className="bg-gray-700 text-orange-300 px-1 py-0.5 rounded text-sm font-mono">
+                {part.slice(1)}
+              </span>
+            );
+          }
+          return <span key={index}>{part}</span>;
+        });
+      };
+
+      return <div className="whitespace-pre-wrap">{renderStreamingText(text)}</div>;
+    }
+
+    // Для завершенных сообщений используем полный markdown
+    return (
+      <ReactMarkdown
+        components={{
+          // Стилизация блоков кода
+          code: ({ node, inline, className, children, ...props }) => {
+            if (inline) {
+              return (
+                <code
+                  className="bg-gray-700 text-orange-300 px-1 py-0.5 rounded text-sm font-mono"
+                  {...props}
+                >
+                  {children}
+                </code>
+              );
+            }
+            return (
+              <pre className="bg-gray-700 p-3 rounded-lg overflow-x-auto my-2">
+                <code
+                  className="text-orange-300 text-sm font-mono"
+                  {...props}
+                >
+                  {children}
+                </code>
+              </pre>
+            );
+          },
+          // Стилизация заголовков
+          h1: ({ children }) => (
+            <h1 className="text-xl font-bold mb-2 text-white">{children}</h1>
+          ),
+          h2: ({ children }) => (
+            <h2 className="text-lg font-bold mb-2 text-white">{children}</h2>
+          ),
+          h3: ({ children }) => (
+            <h3 className="text-md font-bold mb-1 text-white">{children}</h3>
+          ),
+          // Стилизация списков
+          ul: ({ children }) => (
+            <ul className="list-disc list-inside mb-2 space-y-1">{children}</ul>
+          ),
+          ol: ({ children }) => (
+            <ol className="list-decimal list-inside mb-2 space-y-1">{children}</ol>
+          ),
+          li: ({ children }) => (
+            <li className="text-gray-200">{children}</li>
+          ),
+          // Стилизация ссылок
+          a: ({ children, href }) => (
+            <a
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-400 hover:text-blue-300 underline"
+            >
+              {children}
+            </a>
+          ),
+          // Стилизация цитат
+          blockquote: ({ children }) => (
+            <blockquote className="border-l-4 border-gray-600 pl-4 italic text-gray-300 my-2">
+              {children}
+            </blockquote>
+          ),
+          // Стилизация параграфов
+          p: ({ children }) => (
+            <p className="mb-2 last:mb-0">{children}</p>
+          ),
+          // Стилизация жирного текста
+          strong: ({ children }) => (
+            <strong className="font-bold text-white">{children}</strong>
+          ),
+          // Стилизация курсива
+          em: ({ children }) => (
+            <em className="italic text-gray-200">{children}</em>
+          ),
+        }}
+      >
+        {message.text}
+      </ReactMarkdown>
+    );
+  };
 
   return (
     <div className="w-full h-screen bg-gray-900 text-white flex flex-col">
@@ -105,16 +231,19 @@ function Chat() {
             key={idx}
             className={`flex items-start gap-2 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
           >
-            {msg.sender === 'bot' && <BsRobot className="text-2xl mt-1" />}
+            {msg.sender === 'bot' && <BsRobot className="text-2xl mt-1 flex-shrink-0" />}
             <div
               className={`px-4 py-2 rounded-xl break-words max-w-[70%] ${
-                msg.sender === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-white'
+                msg.sender === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-200'
               }`}
             >
-              {msg.text}
+              <MessageContent 
+                message={msg} 
+                isStreaming={msg.sender === 'bot' && isBotTyping && idx === messages.length - 1} 
+              />
             </div>
             {msg.sender === 'user' && (
-              <BsPersonCircle className="text-2xl mt-1 text-gray-300" />
+              <BsPersonCircle className="text-2xl mt-1 text-gray-300 flex-shrink-0" />
             )}
           </div>
         ))}
