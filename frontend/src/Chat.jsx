@@ -91,127 +91,56 @@ function Chat() {
 
   // Компонент для отображения сообщений с поддержкой markdown
   const MessageContent = ({ message, isStreaming = false }) => {
-    if (message.sender === 'user') {
-      return <span>{message.text}</span>;
-    }
+  if (message.sender === 'user') {
+    return <span>{message.text}</span>;
+  }
 
-    // Для потоковых сообщений используем более безопасный подход
-    if (isStreaming) {
-      // Простая обработка для потокового контента
-      const text = message.text;
-      
-      // Обрабатываем инлайн код во время стриминга
-      const renderStreamingText = (text) => {
-        // Разбиваем текст по инлайн коду (`код`)
-        const parts = text.split(/(`[^`]*`?)/g);
-        
-        return parts.map((part, index) => {
-          if (part.startsWith('`') && part.endsWith('`') && part.length > 2) {
+  return (
+    <ReactMarkdown
+      className="prose prose-invert max-w-none"
+      components={{
+        code: ({ node, inline, className, children, ...props }) => {
+          if (inline) {
             return (
-              <code
-                key={index}
-                className="bg-gray-700 text-orange-300 px-1 py-0.5 rounded text-sm font-mono"
-              >
-                {part.slice(1, -1)}
+              <code className="bg-gray-700 text-orange-300 px-1 py-0.5 rounded text-sm font-mono" {...props}>
+                {children}
               </code>
             );
-          } else if (part.startsWith('`')) {
-            // Незавершенный инлайн код
-            return (
-              <span key={index} className="bg-gray-700 text-orange-300 px-1 py-0.5 rounded text-sm font-mono">
-                {part.slice(1)}
-              </span>
-            );
           }
-          return <span key={index}>{part}</span>;
-        });
-      };
+          return (
+            <pre className="bg-gray-700 p-3 rounded-lg overflow-x-auto my-2">
+              <code className="text-orange-300 text-sm font-mono" {...props}>
+                {children}
+              </code>
+            </pre>
+          );
+        },
+        h1: ({ children }) => <h1 className="text-xl font-bold mb-2 text-white">{children}</h1>,
+        h2: ({ children }) => <h2 className="text-lg font-bold mb-2 text-white">{children}</h2>,
+        h3: ({ children }) => <h3 className="text-md font-bold mb-1 text-white">{children}</h3>,
+        ul: ({ children }) => <ul className="list-disc list-inside mb-2 space-y-1">{children}</ul>,
+        ol: ({ children }) => <ol className="list-decimal list-inside mb-2 space-y-1">{children}</ol>,
+        li: ({ children }) => <li className="text-gray-200">{children}</li>,
+        a: ({ children, href }) => (
+          <a href={href} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline">
+            {children}
+          </a>
+        ),
+        blockquote: ({ children }) => (
+          <blockquote className="border-l-4 border-gray-600 pl-4 italic text-gray-300 my-2">
+            {children}
+          </blockquote>
+        ),
+        p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+        strong: ({ children }) => <strong className="font-bold text-white">{children}</strong>,
+        em: ({ children }) => <em className="italic text-gray-200">{children}</em>,
+      }}
+    >
+      {message.text}
+    </ReactMarkdown>
+  );
+};
 
-      return <div className="whitespace-pre-wrap">{renderStreamingText(text)}</div>;
-    }
-
-    // Для завершенных сообщений используем полный markdown
-    return (
-      <ReactMarkdown
-        components={{
-          // Стилизация блоков кода
-          code: ({ node, inline, className, children, ...props }) => {
-            if (inline) {
-              return (
-                <code
-                  className="bg-gray-700 text-orange-300 px-1 py-0.5 rounded text-sm font-mono"
-                  {...props}
-                >
-                  {children}
-                </code>
-              );
-            }
-            return (
-              <pre className="bg-gray-700 p-3 rounded-lg overflow-x-auto my-2">
-                <code
-                  className="text-orange-300 text-sm font-mono"
-                  {...props}
-                >
-                  {children}
-                </code>
-              </pre>
-            );
-          },
-          // Стилизация заголовков
-          h1: ({ children }) => (
-            <h1 className="text-xl font-bold mb-2 text-white">{children}</h1>
-          ),
-          h2: ({ children }) => (
-            <h2 className="text-lg font-bold mb-2 text-white">{children}</h2>
-          ),
-          h3: ({ children }) => (
-            <h3 className="text-md font-bold mb-1 text-white">{children}</h3>
-          ),
-          // Стилизация списков
-          ul: ({ children }) => (
-            <ul className="list-disc list-inside mb-2 space-y-1">{children}</ul>
-          ),
-          ol: ({ children }) => (
-            <ol className="list-decimal list-inside mb-2 space-y-1">{children}</ol>
-          ),
-          li: ({ children }) => (
-            <li className="text-gray-200">{children}</li>
-          ),
-          // Стилизация ссылок
-          a: ({ children, href }) => (
-            <a
-              href={href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-400 hover:text-blue-300 underline"
-            >
-              {children}
-            </a>
-          ),
-          // Стилизация цитат
-          blockquote: ({ children }) => (
-            <blockquote className="border-l-4 border-gray-600 pl-4 italic text-gray-300 my-2">
-              {children}
-            </blockquote>
-          ),
-          // Стилизация параграфов
-          p: ({ children }) => (
-            <p className="mb-2 last:mb-0">{children}</p>
-          ),
-          // Стилизация жирного текста
-          strong: ({ children }) => (
-            <strong className="font-bold text-white">{children}</strong>
-          ),
-          // Стилизация курсива
-          em: ({ children }) => (
-            <em className="italic text-gray-200">{children}</em>
-          ),
-        }}
-      >
-        {message.text}
-      </ReactMarkdown>
-    );
-  };
 
   return (
     <div className="w-full h-screen bg-gray-900 text-white flex flex-col">
