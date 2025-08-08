@@ -74,6 +74,7 @@ app.get('/api/interview', async (req, res) => {
               if (json.response) {
                 // Отправляем каждый токен на фронтенд
                 res.write(`data: ${json.response}\n\n`);
+                console.log(json.response);
               }
             } catch (parseError) {
               console.error('❌ Ошибка парсинга JSON:', parseError, 'Line:', line);
