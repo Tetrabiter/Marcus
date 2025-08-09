@@ -207,8 +207,8 @@ function Chat() {
         ))}
 
         <div ref={messagesEndRef} />
-         <WrongAnswers answers={['2 + 2 = 5', 'Capital of France is Berlin']} />
-         <CorrectAnswers answers={['2 + 2 = 4', 'Capital of USA is Washington']} />
+        {/*  <WrongAnswers answers={['2 + 2 = 5', 'Capital of France is Berlin']} />
+         <CorrectAnswers answers={['2 + 2 = 4', 'Capital of USA is Washington']} /> */}
       </div>
 
       {/* Ввод */}
