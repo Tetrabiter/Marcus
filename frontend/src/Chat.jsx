@@ -45,7 +45,7 @@ function Chat() {
 
     try {
       const eventSource = new EventSource(
-        `http://localhost:3001/api/interview?prompt=${encodeURIComponent("Отвечай в формате Markdown. " + currentInput)}`
+        `http://127.0.0.1:8000/api/interview?prompt=${encodeURIComponent("Отвечай в формате Markdown. " + currentInput)}`
       );
       eventSourceRef.current = eventSource;
 
@@ -74,8 +74,15 @@ function Chat() {
       };
 
       eventSource.onerror = (error) => {
-        console.error('❌ EventSource error:', error);
-        eventSource.close();
+        console.warn('⚠️ EventSource closed or error:', error);
+
+        // если соединение просто закрыто — не показываем ошибку
+        if (eventSource.readyState === EventSource.CLOSED) {
+          console.log('✅ Соединение закрыто нормально');
+          return;
+        }
+
+        // иначе это реальная ошибка
         setIsBotTyping(false);
         setMessages((prev) => [
           ...prev,
@@ -85,6 +92,7 @@ function Chat() {
           },
         ]);
       };
+
 
       eventSource.onopen = () => {
         console.log('✅ Соединение установлено');
