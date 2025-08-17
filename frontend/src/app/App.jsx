@@ -1,7 +1,7 @@
 import { Routes, Route } from "react-router-dom";
-import StartPage from "./StartPage";
-import NotFoundPage from "./404";
-import Chat from "./Chat";
+import StartPage from "../StartPage";
+import NotFoundPage from "../404";
+import Chat from "../Chat";
 
 function App() {
   return(

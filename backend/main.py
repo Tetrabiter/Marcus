@@ -35,7 +35,7 @@ async def interview(request: Request, prompt: str = None):
                     "POST",
                     "http://localhost:11434/api/generate",
                     json={
-                        "model": "codellama:13b",
+                        "model": "gpt-oss:20b",
                         "prompt": prompt,
                         "stream": True,
                     },

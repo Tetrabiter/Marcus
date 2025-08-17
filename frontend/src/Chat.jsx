@@ -45,7 +45,7 @@ function Chat() {
 
     try {
       const eventSource = new EventSource(
-        `http://127.0.0.1:8000/api/interview?prompt=${encodeURIComponent("Отвечай в формате Markdown. " + currentInput)}`
+        `http://127.0.0.1:8000/api/interview?prompt=${encodeURIComponent(currentInput)}`
       );
       eventSourceRef.current = eventSource;
 
