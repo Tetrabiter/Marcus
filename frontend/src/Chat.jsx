@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
-import { IoSend, IoSettingsSharp, IoSunny } from 'react-icons/io5';
+import { IoSend, IoAttach, IoMic } from 'react-icons/io5';
 import { BsRobot, BsPersonCircle } from 'react-icons/bs';
 import { BsFillStopFill } from "react-icons/bs";
 import ReactMarkdown from 'react-markdown';
+import Header from './features/header/Header';
 import WrongAnswers from './WrongAnswers';
-import Header from './Header';
 import CorrectAnswers from './CorrectAnswers';
 
 function Chat() {
@@ -120,6 +120,7 @@ function Chat() {
   }, [messages]);
 
   // Компонент для отображения сообщений с поддержкой markdown
+  // eslint-disable-next-line no-unused-vars
   const MessageContent = ({ message, isStreaming = false }) => {
     if (message.sender === 'user') {
       return <span>{message.text}</span>;
@@ -131,7 +132,7 @@ function Chat() {
       <ReactMarkdown
         className="prose prose-invert max-w-none"
         components={{
-          code: ({ node, inline, className, children, ...props }) => {
+          code: ({ inline, children, ...props }) => {
             if (inline) {
               return (
                 <code className="bg-gray-700 text-orange-300 px-1 py-0.5 rounded text-sm font-mono" {...props}>
@@ -220,38 +221,55 @@ function Chat() {
       </div>
 
       {/* Ввод */}
-      <div className="p-4 border-t border-gray-700">
-        <div className="flex items-center gap-2">
+      <div className="p-6 mb-10 mx-5 border rounded-xl border-gray-700">
+        <div className="flex flex-col items-center gap-2">
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             rows={1}
             placeholder="Введите сообщение..."
-            className="flex-1 resize-none bg-gray-800 text-white rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 w-full resize-none bg-gray-800 text-white rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             disabled={isBotTyping}
           />
 
           {/* Кнопка Отправить */}
-          {!isBotTyping && (
+          <div className='w-full flex justify-between'>
+
             <button
-              onClick={handleSend}
               className="p-2 bg-blue-600 rounded-full hover:bg-blue-700 transition disabled:opacity-50"
             >
-              <IoSend className="text-white text-xl" />
+              <IoAttach className="text-white text-xl" />
             </button>
-          )}
 
-          {/* Кнопка Стоп */}
-          {isBotTyping && (
-            <button
-              onClick={stopGeneratingFunc}
-              className="p-2 bg-red-600 rounded-full hover:bg-red-700 transition"
-            >
-              <BsFillStopFill className="text-white text-xl" />
-            </button>
-          )}
+            <div className='flex gap-3'>
 
+              <button
+                className="p-2 bg-blue-600 rounded-full hover:bg-blue-700 transition disabled:opacity-50"
+              >
+                <IoMic className="text-white text-xl" />
+              </button>
+
+              {!isBotTyping && (
+                <button
+                  onClick={handleSend}
+                  className="p-2 bg-blue-600 rounded-full hover:bg-blue-700 transition disabled:opacity-50"
+                >
+                  <IoSend className="text-white text-xl" />
+                </button>
+              )}
+
+              {/* Кнопка Стоп */}
+              {isBotTyping && (
+                <button
+                  onClick={stopGeneratingFunc}
+                  className="p-2 bg-red-600 rounded-full hover:bg-red-700 transition"
+                >
+                  <BsFillStopFill className="text-white text-xl" />
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>
