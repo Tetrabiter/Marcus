@@ -35,7 +35,7 @@ async def interview(request: Request, prompt: str = None):
                     "POST",
                     "http://localhost:11434/api/generate",
                     json={
-                        "model": "gpt-oss:20b",
+                        "model": "gemma3:latest",
                         "prompt": prompt,
                         "stream": True,
                     },
