@@ -4,8 +4,8 @@ import { BsRobot, BsPersonCircle } from 'react-icons/bs';
 import { BsFillStopFill } from "react-icons/bs";
 import ReactMarkdown from 'react-markdown';
 import Header from './features/header/Header';
-import WrongAnswers from './WrongAnswers';
-import CorrectAnswers from './CorrectAnswers';
+import WrongAnswers from './components/WrongAnswers';
+import CorrectAnswers from './components/CorrectAnswers';
 
 function Chat() {
   const [messages, setMessages] = useState([]);
