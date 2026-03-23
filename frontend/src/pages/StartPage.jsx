@@ -12,7 +12,7 @@ function StartPage() {
           <p className='text-lg md:text-xl text-gray-300 mb-6 max-w-lg mx-auto'>
             Your AI interviewer ready to challenge your skills.
           </p>
-          <Link to='/chat'>
+          <Link to='/dashboard'>
             <button
               className='bg-white text-black py-2 px-6 rounded-2xl font-bold hover:scale-105 transition-transform duration-300 shadow-md'
             >
@@ -21,7 +21,7 @@ function StartPage() {
           </Link>
         </div>
 
-        
+
       </div>
     </>
   )

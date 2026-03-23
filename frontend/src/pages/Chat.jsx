@@ -1,18 +1,25 @@
 import { useState, useRef, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { IoSend, IoAttach, IoMic } from 'react-icons/io5';
 import { BsRobot, BsPersonCircle } from 'react-icons/bs';
 import { BsFillStopFill } from "react-icons/bs";
 import ReactMarkdown from 'react-markdown';
-import Header from './features/header/Header';
-import WrongAnswers from './components/WrongAnswers';
-import CorrectAnswers from './components/CorrectAnswers';
+import Header from '../features/header/Header';
 
 function Chat() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const config = location.state?.interviewConfig;
+
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isBotTyping, setIsBotTyping] = useState(false);
   const messagesEndRef = useRef(null);
   const eventSourceRef = useRef(null);
+
+  const handleEndInterview = () => {
+    navigate('/review', { state: { messages } });
+  };
 
 
   // Stop response generating TODO: dark theme and settings 
@@ -24,7 +31,7 @@ function Chat() {
       setIsBotTyping(false);
       setMessages((prev) => [
         ...prev,
-        { text: '⏹️ Генерация остановлена', sender: 'bot' },
+        { text: 'Генерация остановлена', sender: 'bot' },
       ]);
     }
   }
@@ -44,8 +51,13 @@ function Chat() {
     setIsBotTyping(true);
 
     try {
+      let promptText = currentInput;
+      if (messages.length === 0 && config) {
+        promptText = `[System Context: Role=${config.stack}, Level=${config.level}, Focus=${config.type}] User: ${currentInput}`;
+      }
+
       const eventSource = new EventSource(
-        `http://127.0.0.1:8000/api/interview?prompt=${encodeURIComponent(currentInput)}`
+        `http://127.0.0.1:8000/api/interview?prompt=${encodeURIComponent(promptText)}`
       );
       eventSourceRef.current = eventSource;
 
@@ -132,8 +144,9 @@ function Chat() {
       <ReactMarkdown
         className="prose prose-invert max-w-none"
         components={{
-          code: ({ inline, children, ...props }) => {
-            if (inline) {
+          code: ({ children, className, ...props }) => {
+            const isInline = !className;
+            if (isInline) {
               return (
                 <code className="bg-gray-700 text-orange-300 px-1 py-0.5 rounded text-sm font-mono" {...props}>
                   {children}
@@ -187,6 +200,19 @@ function Chat() {
       </div> */}
 
       <Header />
+
+      {/* End Interview Action Bar */}
+      <div className="flex justify-between items-center px-4 py-3 bg-gray-800/50 border-b border-gray-700">
+        <div className="text-gray-400 text-sm">
+          {config ? `Interview: ${config.level} ${config.stack}` : 'Standard Interview'}
+        </div>
+        <button
+          onClick={handleEndInterview}
+          className="bg-red-500/10 text-red-500 hover:bg-red-500/20 px-4 py-2 rounded-lg font-medium transition-colors text-sm"
+        >
+          End Interview
+        </button>
+      </div>
 
       {/* Сообщения */}
       <div className="flex-1 overflow-y-auto px-4 py-2 space-y-4">

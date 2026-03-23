@@ -1,4 +1,8 @@
-const WrongAnswers = ({ answers }) => {
+interface WrongAnswersProps {
+  answers: string[];
+}
+
+const WrongAnswers = ({ answers }: WrongAnswersProps) => {
   if (!answers || answers.length === 0) return null;
 
   return (
